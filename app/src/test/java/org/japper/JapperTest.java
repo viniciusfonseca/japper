@@ -88,7 +88,7 @@ class JapperTest {
         }
     }
 
-    private final Japper<AddressDTO, Address> mapper = new Japper<AddressDTO, Address>(Address.class)
+    private final Japper<AddressDTO, Address> toAddress = new Japper<AddressDTO, Address>(Address.class)
         .map(Address::setNumber, s -> Long.parseLong(s.getNumber()))
         .map(Address::setCity, AddressDTO::getCity)
         .map(Address::setState, s -> switch (s.getState()) {
@@ -103,7 +103,7 @@ class JapperTest {
             t.setStreet(t.getStreet() + " ZZ");
         });
 
-    private final Japper<Address, AddressDTO> inverseMapper = new Japper<Address, AddressDTO>(AddressDTO.class)
+    private final Japper<Address, AddressDTO> toAddressDTO = new Japper<Address, AddressDTO>(AddressDTO.class)
         .map(AddressDTO::setNumber, s -> s.getNumber().toString())
         .map(AddressDTO::setCity, Address::getCity)
         .map(AddressDTO::setState, s -> switch (s.getState()) {
@@ -119,6 +119,14 @@ class JapperTest {
             t.setStreet(t.getStreet().replaceAll("\\sZZ$", ""));
         });
 
+    private Address map(AddressDTO addressDTO) throws Exception {
+        return toAddress.parse(addressDTO);
+    }
+
+    private AddressDTO map(Address address) throws Exception {
+        return toAddressDTO.parse(address);
+    }
+
     @Test
     public void createsProperMapper() throws Exception {
 
@@ -129,14 +137,14 @@ class JapperTest {
             setStreet("Smpl Street");
         }};
 
-        var result = mapper.parse(input);
+        var result = map(input);
 
         assertEquals("Rio de Janeiro", result.getCity());
         assertEquals(122L, result.getNumber());
         assertEquals(State.RJ, result.getState());
         assertEquals("Smpl Street ZZ", result.getStreet());
 
-        var inversed = inverseMapper.parse(result);
+        var inversed = map(result);
 
         assertEquals(inversed.getCity(), input.getCity());
         assertEquals(inversed.getNumber(), input.getNumber());
