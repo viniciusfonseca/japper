@@ -88,30 +88,59 @@ class JapperTest {
         }
     }
 
+    private final Japper<AddressDTO, Address> mapper = new Japper<AddressDTO, Address>(Address.class)
+        .map(Address::setNumber, s -> Long.parseLong(s.getNumber()))
+        .map(Address::setCity, AddressDTO::getCity)
+        .map(Address::setState, s -> switch (s.getState()) {
+            case "RJ" -> State.RJ;
+            case "MG" -> State.MG;
+            case "ES" -> State.ES;
+            default -> State.SP;
+        })
+        .map(Address::setStreet, AddressDTO::getStreet)
+        .then(t -> {
+            t.setNumber(t.getNumber() - 1);
+            t.setStreet(t.getStreet() + " ZZ");
+        });
+
+    private final Japper<Address, AddressDTO> inverseMapper = new Japper<Address, AddressDTO>(AddressDTO.class)
+        .map(AddressDTO::setNumber, s -> s.getNumber().toString())
+        .map(AddressDTO::setCity, Address::getCity)
+        .map(AddressDTO::setState, s -> switch (s.getState()) {
+            case RJ -> "RJ";
+            case MG -> "MG";
+            case ES -> "ES";
+            default -> "SP";
+        })
+        .map(AddressDTO::setStreet, Address::getStreet)
+        .then(t -> {
+            Long number = (Long.parseLong(t.getNumber()) + 1);
+            t.setNumber(number.toString());
+            t.setStreet(t.getStreet().replaceAll("\\sZZ$", ""));
+        });
+
     @Test
     public void createsProperMapper() throws Exception {
 
-        var mapper = new Japper<AddressDTO, Address>(Address.class)
-            .map(Address::setNumber, s -> Long.parseLong(s.getNumber()))
-            .map(Address::setCity, AddressDTO::getCity)
-            .map(Address::setState, s -> switch (s.getState()) {
-                case "RJ" -> State.RJ;
-                case "MG" -> State.MG;
-                case "ES" -> State.ES;
-                default -> State.SP;
-            })
-            .map(Address::setStreet, AddressDTO::getStreet);
-
-        var result = mapper.parse(new AddressDTO() {{
+        var input = new AddressDTO() {{
             setCity("Rio de Janeiro");
             setNumber("123");
             setState("RJ");
             setStreet("Smpl Street");
-        }});
+        }};
+
+        var result = mapper.parse(input);
 
         assertEquals("Rio de Janeiro", result.getCity());
-        assertEquals(123L, result.getNumber());
+        assertEquals(122L, result.getNumber());
         assertEquals(State.RJ, result.getState());
-        assertEquals("Smpl Street", result.getStreet());
+        assertEquals("Smpl Street ZZ", result.getStreet());
+
+        var inversed = inverseMapper.parse(result);
+
+        assertEquals(inversed.getCity(), input.getCity());
+        assertEquals(inversed.getNumber(), input.getNumber());
+        assertEquals(inversed.getState(), input.getState());
+        assertEquals(inversed.getStreet(), input.getStreet());
     }
 }
