@@ -1,5 +1,6 @@
 package org.japper;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -88,43 +89,49 @@ class JapperTest {
         }
     }
 
-    private final Japper<AddressDTO, Address> toAddress = new Japper<AddressDTO, Address>(Address.class)
-        .map(Address::setNumber, s -> Long.parseLong(s.getNumber()))
-        .map(Address::setCity, AddressDTO::getCity)
-        .map(Address::setState, s -> switch (s.getState()) {
-            case "RJ" -> State.RJ;
-            case "MG" -> State.MG;
-            case "ES" -> State.ES;
-            default -> State.SP;
-        })
-        .map(Address::setStreet, AddressDTO::getStreet)
-        .then(t -> {
-            t.setNumber(t.getNumber() - 1);
-            t.setStreet(t.getStreet() + " ZZ");
-        });
+    @BeforeAll
+    static void beforeAll() {
 
-    private final Japper<Address, AddressDTO> toAddressDTO = new Japper<Address, AddressDTO>(AddressDTO.class)
-        .map(AddressDTO::setNumber, s -> s.getNumber().toString())
-        .map(AddressDTO::setCity, Address::getCity)
-        .map(AddressDTO::setState, s -> switch (s.getState()) {
-            case RJ -> "RJ";
-            case MG -> "MG";
-            case ES -> "ES";
-            default -> "SP";
-        })
-        .map(AddressDTO::setStreet, Address::getStreet)
-        .then(t -> {
-            Long number = (Long.parseLong(t.getNumber()) + 1);
-            t.setNumber(number.toString());
-            t.setStreet(t.getStreet().replaceAll("\\sZZ$", ""));
-        });
+        new Japper<>(AddressDTO.class, Address.class)
+            .map(Address::setNumber, s -> Long.parseLong(s.getNumber()))
+            .map(Address::setCity, AddressDTO::getCity)
+            .map(Address::setState, s -> switch (s.getState()) {
+                case "RJ" -> State.RJ;
+                case "MG" -> State.MG;
+                case "ES" -> State.ES;
+                default -> State.SP;
+            })
+            .map(Address::setStreet, AddressDTO::getStreet)
+            .then(t -> {
+                t.setNumber(t.getNumber() - 1);
+                t.setStreet(t.getStreet() + " ZZ");
+            });
+
+        new Japper<>(Address.class, AddressDTO.class)
+            .map(AddressDTO::setNumber, s -> s.getNumber().toString())
+            .map(AddressDTO::setCity, Address::getCity)
+            .map(AddressDTO::setState, s -> switch (s.getState()) {
+                case RJ -> "RJ";
+                case MG -> "MG";
+                case ES -> "ES";
+                default -> "SP";
+            })
+            .map(AddressDTO::setStreet, Address::getStreet)
+            .then(t -> {
+                var number = (Long.parseLong(t.getNumber()) + 1);
+                t.setNumber(Long.toString(number));
+                t.setStreet(t.getStreet().replaceAll("\\sZZ$", ""));
+            });
+    }
 
     private Address map(AddressDTO addressDTO) throws Exception {
-        return toAddress.parse(addressDTO);
+        var mapper = Japper.getFor(AddressDTO.class, Address.class);
+        return mapper.parse(addressDTO);
     }
 
     private AddressDTO map(Address address) throws Exception {
-        return toAddressDTO.parse(address);
+        var mapper = Japper.getFor(Address.class, AddressDTO.class);
+        return mapper.parse(address);
     }
 
     @Test
